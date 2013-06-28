@@ -10,34 +10,30 @@ class spm{
      
      private static $mysqli;
      
-     private static $host;
+     private $host;
      
-     private static $user;
+     private $user;
      
-     private static $password;
+     private $password;
      
-     private static $base;
+     private $base;
      
-     private static $charset = 'utf8';
+     private $charset = 'utf8';
      
      
-     public function __construct($options = null){  
-          if(self::$host == null || self::$base == null || self::$user == null){
-               self::$host = $options['host'];
-               self::$user = $options['user'];
-               self::$password = $options['password'];
-               self::$base = $options['base'];
+     public function __construct($options = array('host'=>'localhost','user'=>'root','password'=>'','base'=>'testbase')){  
+               $this->host = $options['host'];
+               $this->user = $options['user'];
+               $this->password = $options['password'];
+               $this->base = $options['base'];
                if(!is_null($options['charset']))
-                    self::$charset == $options['charset'];
-               
-          }
+                    $this->charset == $options['charset'];
                     /*Устанавливаем константы*/   
                define('SPM_NAME','SMART PHPMySQLi');
                define('SPM_GET_ERRORS','get_error');                                              
      } 
           
      public function connect(){
-          
           self::$mysqli = self::MySQLiConnect();
      }  
      
@@ -47,9 +43,9 @@ class spm{
      
      private function MySQLiConnect(){
           if(is_null(self::$mysqli)){ //Если ранее одключение не создавалась
-               $mysqli = new mysqli(self::$host,self::$user,self::$password,self::$base);//Создаем объект с соединением
+               $mysqli = new mysqli($this->host,$this->user,$this->password,$this->base);//Создаем объект с соединением
                if($mysqli->error == null){
-                    $mysqli->set_charset(self::$charset); //Устанавливаем кодировку
+                    $mysqli->set_charset($this->charset); //Устанавливаем кодировку
                     return $mysqli;     
                }else return false;
           }else return self::$mysqli; //Иначе возвращаем переменную с подкючением
