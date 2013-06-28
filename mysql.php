@@ -4,7 +4,7 @@
  * @name Smart PHPMySQLi
  * Version Modules
  * @construc-build 2
- * @query-build 3
+ * @query-build 4
 */
 class spm{
      
@@ -17,7 +17,8 @@ class spm{
                $mysqli->set_charset(CHARSET);
                self::$mysqli = $mysqli; 
                /*SET DEFINES*/   
-               define('SPM_NAME','SMART PHPMySQLi ');   
+               define('SPM_NAME','SMART PHPMySQLi');
+               define('SPM_GET_ERRORS','get_error'); 
                
                if(!is_null($options['unset_defines']) && $options['unset_defines'] == true){
                     $arr = array('DB_HOST','DB_BASE','DB_USER','DB_PASSWORD');
@@ -32,47 +33,63 @@ class spm{
   
      //Метот запроса в БД
      public function query($query,$options = null){
-          /*Проверяем для стабильности*/
-                  //Защитный паттерн
-          if(!is_null($options['guard_pattern'])){
-               if(preg_match($options['guard_pattern'],$query) == false){
-                    echo(SPM_NAME.'Запрос не прошел защитный паттерн или паттерн задан не верно');
-               }
-          } 
-         
-          if(!is_null($options) && !is_array($options)) echo(SPM_NAME.'Опции в запросе дожны сообщаться массивом');
-          
-          $pattern = '/(select|alert|delete|insert|create|update|drop)/i'; //Регулярное выражение для проверки входящего запроса
-          if(preg_match($pattern,$query)){ //Проверяем соответствует ли запрос паттерну
-               if(is_null($options)){ //Проверяем опции на NULL
-                    if(!is_null($query)){ //Если запрос не пустой
-                         $res = self::$mysqli->query($query); //Выполняем запрос
-                         if($res != false){//Если запрос прошел
-                              if(preg_match('/select/i',$query)){
-                                   //Записываем в нужный формат
-                                   switch($options){
-                                        case 'assoc':
-                                        $res = $res->fetch_assoc();
-                                        break;
-                                        
-                                        default:
-                                        $res = $res->fetch_array();
-                                   }    
-                                   return $res;//Возвращаем Возвращаем массив данных     
-                              }else return true;
-                              
-                         }else echo(SPM_NAME.'Не найдены элементы указанные в запросе');
-                             
-                    }else echo(SPM_NAME.'Ошибка! Был вызван метод с пустым значением запроса!');     
-               }    
-          }else echo(SPM_NAME.'В запросе было сообщено невозможное действие');
-          
-          
-          
-                   
+          if($a = self::doStable($options) === false || self::CheckPattern($query,$options['guard_pattern']) === false || self::CheckQuery($query) == false){
+              echo 'hello';
+          }else{
+                    $res = self::$mysqli->query($query); //Выполняем запрос
+                    $mysqli = $res;
+                    if(preg_match('/select/i',$query)){
+                         //Записываем в нужный формат
+                         switch($options){
+                              case 'assoc':
+                              $res = $res->fetch_assoc();
+                              break;
+                                                  
+                              default:
+                              $res = $res->fetch_array();
+                         }    
+                         return self::getErrors($options['get_errors'],$query,$mysqli,$res);
+                    }else return true;            
+               }            
      }
      
+     private function CheckPattern($query,$pattern){
+          if(!is_null($pattern)){
+               if(preg_match($pattern,$query) == false)
+                    return false;    
+          }else
+               return true; 
+               
+                
+     }
      
+     private function doStable($options){
+           if(!is_null($options) && !is_array($options))
+               return false;
+           else
+               return true;        
+     }
+     
+     private function CheckQuery($query){
+               $pattern = '/(select|alert|delete|insert|create|update|drop)/i'; //Регулярное выражение для проверки входящего запроса
+               
+               if(preg_match($pattern,$query))
+                    return true;
+               else
+                    return false;         
+     }
+     
+     private function getErrors($option,$query,$mysqli,$result){
+          
+          if($option == SPM_GET_ERRORS){
+               return array(
+                    'result' => $mysqli,
+                    'query' => $query,
+                    'errors' => $mysqli->error);
+          }else
+              return $result;            
+     }
+
 
      public function createTable($arr){
        array(
