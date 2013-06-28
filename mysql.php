@@ -3,53 +3,69 @@
  * @author Artur Aralin
  * @name Smart PHPMySQLi
  * Version Modules
- * @construc-build 2
+ * @construc-build 3
  * @query-build 4
 */
 class spm{
      
      private static $mysqli;
      
-     public function __construct($options = array()) {  
-          $mysqli = new mysqli(DB_HOST,DB_USER,DB_PASSWORD,DB_BASE);
-          // var_dump($mysqli);
-          if($mysqli->error == null){
-               $mysqli->set_charset(CHARSET);
-               self::$mysqli = $mysqli; 
-               /*SET DEFINES*/   
-               define('SPM_NAME','SMART PHPMySQLi');
-               define('SPM_GET_ERRORS','get_error'); 
-               
-               if(!is_null($options['unset_defines']) && $options['unset_defines'] == true){
-                    $arr = array('DB_HOST','DB_BASE','DB_USER','DB_PASSWORD');
-                    for($i = 0;$i < count($arr);$i++){
-                         define($arr[$i],NULL);
-                    }
-               }                              
-          }else echo(SPM_NAME.'Ошибка соединения с MySQL');                      
-     }
+     private static $host;
      
+     private static $user;
+     
+     private static $password;
+     
+     private static $base;
+     
+     private static $charset = 'utf8';
+     
+     
+     public function __construct($options = null){  
+          if(self::$host == null || self::$base == null || self::$user == null){
+               self::$host = $options['host'];
+               self::$user = $options['user'];
+               self::$password = $options['password'];
+               self::$base = $options['base'];
+               if(!is_null($options['charset']))
+                    self::$charset == $options['charset'];
+               
+          }
+                    /*Устанавливаем константы*/   
+               define('SPM_NAME','SMART PHPMySQLi');
+               define('SPM_GET_ERRORS','get_error');                                              
+     } 
+          
+     public function connect(){
+          
+          self::$mysqli = self::MySQLiConnect();
+     }  
+     
+     public function disconnect(){
+          self::$mysqli = null;
+     }                  
+     
+     private function MySQLiConnect(){
+          if(is_null(self::$mysqli)){ //Если ранее одключение не создавалась
+               $mysqli = new mysqli(self::$host,self::$user,self::$password,self::$base);//Создаем объект с соединением
+               if($mysqli->error == null){
+                    $mysqli->set_charset(self::$charset); //Устанавливаем кодировку
+                    return $mysqli;     
+               }else return false;
+          }else return self::$mysqli; //Иначе возвращаем переменную с подкючением
+                  
+     }
   
   
      //Метот запроса в БД
      public function query($query,$options = null){
-          if($a = self::doStable($options) === false || self::CheckPattern($query,$options['guard_pattern']) === false || self::CheckQuery($query) == false){
-              echo 'hello';
+          if($a = self::doStable($query,$options) === false || self::CheckPattern($query,$options['guard_pattern']) === false || self::CheckQuery($query) == false){
+              return false;
           }else{
                     $res = self::$mysqli->query($query); //Выполняем запрос
                     $mysqli = $res;
-                    if(preg_match('/select/i',$query)){
                          //Записываем в нужный формат
-                         switch($options){
-                              case 'assoc':
-                              $res = $res->fetch_assoc();
-                              break;
-                                                  
-                              default:
-                              $res = $res->fetch_array();
-                         }    
-                         return self::getErrors($options['get_errors'],$query,$mysqli,$res);
-                    }else return true;            
+                         return self::CheckErrors($options['get_errors'],$query,$mysqli,$res);           
                }            
      }
      
@@ -63,8 +79,8 @@ class spm{
                 
      }
      
-     private function doStable($options){
-           if(!is_null($options) && !is_array($options))
+     private function doStable($query,$options){
+           if((!is_null($options) && !is_array($options)) or !is_string($query))
                return false;
            else
                return true;        
@@ -79,7 +95,7 @@ class spm{
                     return false;         
      }
      
-     private function getErrors($option,$query,$mysqli,$result){
+     private function CheckErrors($option,$query,$mysqli,$result){
           
           if($option == SPM_GET_ERRORS){
                return array(
